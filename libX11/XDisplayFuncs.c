@@ -1,6 +1,4 @@
 #include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 
 #include "../common.h"
 #include <X11/Xutil.h>
@@ -38,7 +36,12 @@ void AXE11_GetWinDimensions(WindowDef *win, unsigned int *width_out, unsigned in
     
     int width, height;
     if (win->fullscreen) {
+#ifndef NO_SDL
         SDL_GetWindowSize(static_dpy->sdl_win, &width, &height);
+#else
+        width = 320;
+        height = 240;
+#endif
     } else {
         width = win->width;
         height = win->height;
@@ -91,7 +94,7 @@ DECLSPEC Display *XOpenDisplay(const char *dpy_name)
 {
     if (!static_dpy)
         static_dpy = calloc(1, sizeof(*static_dpy));
-
+#ifndef NO_SDL
     // Attempt to create our "screen"
     static_dpy->sdl_win = SDL_CreateWindow("test", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		0, 0, SDL_WINDOW_OPENGL);
@@ -132,7 +135,17 @@ DECLSPEC Display *XOpenDisplay(const char *dpy_name)
     static_screens[0].mheight = 42; //rg351p defaults for now. TODO:: Find a way to properly fill this.
     static_screens[0].root = XCreateWindow((Display*)static_dpy, 0, 0, 0, static_screens[0].width, static_screens[0].height, 0, depth, 0, NULL, 0, NULL);
     XSetInputFocus((Display*)static_dpy, static_screens[0].root, RevertToNone, 0);
+#else
+    static_dpy->nscreens = 1;
+    static_dpy->screens = static_screens;
+    static_dpy->default_screen = 0;
 
+    //TODO:: Depths
+    static_screens[0].mwidth = 82;
+    static_screens[0].mheight = 42; //rg351p defaults for now. TODO:: Find a way to properly fill this.
+    static_screens[0].root = XCreateWindow((Display*)static_dpy, 0, 0, 0, 320, 240, 0, 32, 0, NULL, 0, NULL);
+    XSetInputFocus((Display*)static_dpy, static_screens[0].root, RevertToNone, 0);
+#endif
     STATUS("Created X11 display!\n");
     return (Display*)static_dpy;
 }
@@ -187,6 +200,7 @@ DECLSPEC int XDefaultDepth(CAST_DPY(dpy), int screen_number)
 {
     //TODO:: proper depth lists??
     UNCAST_DPY;
+#ifndef NO_SDL
     if (!dpy->sdl_win)
         return 0;
     
@@ -194,6 +208,9 @@ DECLSPEC int XDefaultDepth(CAST_DPY(dpy), int screen_number)
     uint32_t fmt = SDL_GetWindowPixelFormat(dpy->sdl_win);
     SDL_PixelFormatEnumToMasks(fmt, &ret, &unused, &unused, &unused, &unused);
     return ret;
+#else
+    return 32;
+#endif
 }
 
 DECLSPEC Status XGetWindowAttributes(
@@ -221,6 +238,7 @@ DECLSPEC Status XGetWindowAttributes(
 DECLSPEC XVisualInfo *XGetVisualInfo(CAST_DPY(dpy), long vinfo_mask, XVisualInfo *vinfo_template, int *nitems_return)
 {
     UNCAST_DPY;
+#ifndef NO_SDL
     if (!dpy->sdl_win)
         return 0;
 
@@ -239,7 +257,19 @@ DECLSPEC XVisualInfo *XGetVisualInfo(CAST_DPY(dpy), long vinfo_mask, XVisualInfo
     vinfo->visual = (Visual*)0xDEADBEEF;
     vinfo->visualid = 0;
     vinfo->bits_per_rgb = (vinfo->depth + 7) / 8;
+#else
+    *nitems_return = 1;
+    XVisualInfo *vinfo = malloc(sizeof(*vinfo_template));
 
+    vinfo->depth = 32;
+    vinfo->red_mask =   0xFF000000;
+    vinfo->green_mask = 0x00FF0000;
+    vinfo->blue_mask =  0x0000FF00;
+    vinfo->screen = 0;
+    vinfo->visual = (Visual*)0xDEADBEEF;
+    vinfo->visualid = 0;
+    vinfo->bits_per_rgb = (vinfo->depth + 7) / 8;
+#endif
     return vinfo;
 }
 
@@ -287,9 +317,10 @@ DECLSPEC Window XCreateWindow(
 )
 {
     UNCAST_DPY;
+#ifndef NO_SDL
     if (!dpy->sdl_win)
         return BadWindow;
-
+#endif
     //Root windows have no parent
     WindowDef *win_par = NULL;
     if (parent)
@@ -309,7 +340,12 @@ DECLSPEC Window XCreateWindow(
         win->class = ((class == CopyFromParent) && win_par) ? win_par->class : class;
         win->x = x;
         win->y = y;
+#ifndef NO_SDL
         SDL_GetWindowSize(dpy->sdl_win, &win->max_width, &win->max_height);
+#else
+        win->max_width = 320;
+        win->max_height = 240;
+#endif
         win->min_width = 0;
         win->min_height = 0;
         win->border_width = border_width;
@@ -366,10 +402,10 @@ DECLSPEC int XSetStandardProperties(
     XSizeHints *hints)
 {
     UNCAST_DPY;
-
+#ifndef NO_SDL
     if (dpy->sdl_win)
         SDL_SetWindowTitle(dpy->sdl_win, window_name);
-
+#endif
     return 0;
 }
 
@@ -511,11 +547,11 @@ DECLSPEC int XResetScreenSaver(CAST_DPY(dpy))
 //TODO :: Investigate and propose a proper solution
 DECLSPEC void AXE11_SwapBuffers()
 {
+#ifndef NO_SDL
     if (!static_dpy->sdl_win)
         return;
-
     SDL_GL_SwapWindow(static_dpy->sdl_win);
-    
+#endif
     AXE11_WorkaroundGMSRunnerFullscreen(static_dpy);
 }
 

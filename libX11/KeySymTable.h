@@ -2,7 +2,7 @@
 #define __KEY_SYM_TABLE_H__
 
 #include "../common.h"
-
+#ifndef NO_SDL
 /* *INDENT-OFF* */
 static const struct {
     KeySym keysym;
@@ -115,5 +115,5 @@ static const struct {
     { XK_bracketleft, SDL_SCANCODE_LEFTBRACKET },
     { XK_bracketright, SDL_SCANCODE_RIGHTBRACKET },
 };
-
+#endif
 #endif /* __KEY_SYM_TABLE_H__ */

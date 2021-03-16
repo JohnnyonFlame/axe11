@@ -2,10 +2,15 @@
 #define __COMMON_H__
 
 #define XLIB_ILLEGAL_ACCESS
+#include <string.h>
+#include <stdlib.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#ifndef NO_SDL
 #include <SDL.h>
-
+#else
+# define DECLSPEC __attribute__ ((visibility("default")))
+#endif
 struct __Display {
     XExtData *ext_data;	/* hook for extension to hang data */
 	struct _XPrivate *private1;
@@ -56,8 +61,10 @@ struct __Display {
 	char *xdefaults;	/* contents of defaults from server */
 
     /* Private */
+#ifndef NO_SDL
     SDL_Window *sdl_win;
     SDL_GLContext *sdl_ctx;
+#endif
 };
 
 typedef struct WindowDef {

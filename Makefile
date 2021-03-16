@@ -2,8 +2,15 @@ CROSS_PREFIX=arm-linux-gnueabihf-
 CCACHE?=
 CC=$(CCACHE) $(CROSS_PREFIX)gcc
 SDL_CONFIG=$(CROSS_PREFIX)pkg-config sdl2
-SDL_CFLAGS=$(shell $(SDL_CONFIG) --cflags)
-SDL_LDFLAGS=$(shell $(SDL_CONFIG) --libs)
+
+USE_SDL?=1
+ifeq (1,$(USE_SDL))
+	SDL_CFLAGS=$(shell $(SDL_CONFIG) --cflags)
+	SDL_LDFLAGS=$(shell $(SDL_CONFIG) --libs)
+else
+	SDL_CFLAGS=-DNO_SDL
+	SDL_LDFLAGS=""
+endif
 
 ifeq ($(MAKECMDGOALS),debug)
 	CFLAGS=-g -O0 -fPIC $(SDL_CFLAGS)

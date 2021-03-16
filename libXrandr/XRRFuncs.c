@@ -1,7 +1,8 @@
 #include "../common.h"
-#include <SDL.h>
 #include <X11/extensions/Xrandr.h>
-
+#ifndef NO_SDL
+#include <SDL.h>
+#endif
 //TODO:: Rework and rethink this entire file.
 //Maybe allocate +4 for the window, return it with an offset, and free(addr-offset)?
 
@@ -35,12 +36,14 @@ DECLSPEC XRRCrtcInfo *XRRGetCrtcInfo (CAST_DPY(dpy), XRRScreenResources *resourc
     
     int		    npossible;
     RROutput	    *possible;
-
+#ifndef NO_SDL
     if (dpy->sdl_win) {
         SDL_GetWindowSize(dpy->sdl_win, &static_crtcInfo.width, &static_crtcInfo.height);
         STATUS("Got XRRGetCrtcInfo mode %dx%d.\n", static_crtcInfo.width, static_crtcInfo.height);
     }
-    else {
+    else
+#endif
+    {
         ERROR("No SDL window initialized! Using default 320x240 mode.\n");
         static_crtcInfo.width = 320;
         static_crtcInfo.height = 240;

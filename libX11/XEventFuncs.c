@@ -1,9 +1,11 @@
 #include "../common.h"
 
-#include <SDL_keycode.h>
 #include <X11/keysym.h>
 #include <X11/Xutil.h>
+#ifndef NO_SDL
+#include <SDL_keycode.h>
 #include <SDL_events.h>
+#endif
 
 #include "XDisplayFuncs.h"
 #include "XEventHelpers.h"
@@ -106,7 +108,7 @@ DECLSPEC int XPending(CAST_DPY(dpy))
 
     if (nwindow < 2)
         return 0;
-
+#ifndef NO_SDL
     SDL_Event ev;
     while (SDL_PollEvent(&ev)) {
         switch(ev.type) {
@@ -143,7 +145,7 @@ DECLSPEC int XPending(CAST_DPY(dpy))
             continue;
         };
     }
-
+#endif
     //TODO:: Translate mouse events
     return AXE11_GetEventCount();
 }
@@ -194,6 +196,7 @@ DECLSPEC int XLookupString(
     XComposeStatus *status
 ) 
 {
+#ifndef NO_SDL
     if (buffer)
         memset(buffer, 0, nbytes);
 
@@ -212,6 +215,9 @@ DECLSPEC int XLookupString(
     
     *keysym = SDL_GetKeyFromScancode(event->keycode) & 0xFF;
     return nbytes & 1;
+#else
+    return 0;
+#endif
 }
 
 DECLSPEC int XSetInputFocus(CAST_DPY(dpy), Window focus, int revert_to, Time time)
