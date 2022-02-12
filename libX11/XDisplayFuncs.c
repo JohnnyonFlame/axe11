@@ -701,13 +701,15 @@ DECLSPEC Bool XQueryPointer(
 }
 
 DECLSPEC int XWarpPointer(
-    Display* display,
+    CAST_DPY(dpy),
     Window src_w, Window dest_w,
     int src_x, int src_y,
     unsigned  src_width, unsigned  src_height,
     int dest_x, int	dest_y
 )
 {
-    WARN_STUB;
+    UNCAST_DPY;
+
+    SDL_WarpMouseInWindow(dpy->sdl_win, dest_x, dest_y);
     return 0;
 }

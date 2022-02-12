@@ -110,16 +110,48 @@ DECLSPEC int XPending(CAST_DPY(dpy))
         return 0;
 #ifndef NO_SDL
     SDL_Event ev;
+    WindowDef *win = AXE11_GetWinDefFromID(static_focus);
+    if (!win) {
+        ERROR("Unable to find default window for keyboard events.\n");
+        return 0;
+    }
+
     while (SDL_PollEvent(&ev)) {
         switch(ev.type) {
+        case SDL_MOUSEMOTION: {
+            XMotionEvent xmotion = {};
+            xmotion.type = MotionNotify;
+            xmotion.window = win->id;
+            xmotion.root = win->id;
+            xmotion.subwindow = None;
+            xmotion.same_screen = True;
+            xmotion.display = _dpy;
+            xmotion.time = SDL_GetTicks();
+            xmotion.x = ev.motion.x;
+            xmotion.y = ev.motion.y;
+
+            AXE11_PushEvent((const XEvent *)&xmotion);
+            break;
+        }
+        case SDL_MOUSEBUTTONDOWN:
+        case SDL_MOUSEBUTTONUP: {
+            XButtonEvent xbtn = {};
+            xbtn.type = (ev.type == SDL_MOUSEBUTTONDOWN) ? ButtonPress : ButtonRelease;
+            xbtn.window = win->id;
+            xbtn.root = win->id;
+            xbtn.subwindow = None;
+            xbtn.same_screen = True;
+            xbtn.display = _dpy;
+            xbtn.time = SDL_GetTicks();
+            xbtn.x = ev.button.x;
+            xbtn.y = ev.button.y;
+
+            AXE11_PushEvent((const XEvent *)&xbtn);
+            break;
+        }
         case SDL_KEYDOWN:
         case SDL_KEYUP: {
-            XKeyEvent xkey;
-            WindowDef *win = AXE11_GetWinDefFromID(static_focus);
-            if (!win) {
-                ERROR("Unable to find default window for keyboard events.\n");
-                continue;
-            }
+            XKeyEvent xkey = {};
 
             xkey.type = (ev.type == SDL_KEYDOWN) ? KeyPress : KeyRelease;
             xkey.window = win->id;
@@ -161,8 +193,7 @@ DECLSPEC int XNextEvent(
     } else if (event_return) {
         if (AXE11_PopEvent(_dpy, event_return))
             return 0;
-        else
-            return BadValue;
+        memset(event_return, 0, sizeof(XEvent));
     }
 
     return 0;
