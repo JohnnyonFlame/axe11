@@ -37,17 +37,24 @@ DECLSPEC XRRCrtcInfo *XRRGetCrtcInfo (CAST_DPY(dpy), XRRScreenResources *resourc
     int		    npossible;
     RROutput	    *possible;
 #ifndef NO_SDL
-    if (dpy->sdl_win) {
-        SDL_GetWindowSize(dpy->sdl_win, &static_crtcInfo.width, &static_crtcInfo.height);
-        STATUS("Got XRRGetCrtcInfo mode %dx%d.\n", static_crtcInfo.width, static_crtcInfo.height);
+    // Ensure SDL Video Subsystem is initialized first.
+    if (SDL_WasInit(SDL_INIT_VIDEO) == 0)
+        SDL_Init(SDL_INIT_VIDEO);
+
+    SDL_DisplayMode mode;
+    if (SDL_GetDesktopDisplayMode(0, &mode) == 0) {
+        STATUS("Got XRRGetCrtcInfo mode %dx%d.\n", mode.w, mode.h);
+        static_crtcInfo.width = mode.w;
+        static_crtcInfo.height = mode.h;
+    } else {
+        ERROR("XRRGetCrtcInfo failure, %s.\n", SDL_GetError());
+        exit(-1);
     }
-    else
+#else
+    ERROR("No SDL! Using default 320x240 mode.\n");
+    static_crtcInfo.width = 320;
+    static_crtcInfo.height = 240;
 #endif
-    {
-        ERROR("No SDL window initialized! Using default 320x240 mode.\n");
-        static_crtcInfo.width = 320;
-        static_crtcInfo.height = 240;
-    }
     static_crtcInfo.noutput = 1;
     static_crtcInfo.outputs = xrr_outputs;
     static_crtcInfo.npossible = 1;

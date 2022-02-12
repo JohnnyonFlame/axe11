@@ -27,6 +27,13 @@ WindowDef static_windows[5] = {};
 struct __Display *static_dpy = NULL;
 Screen static_screens[1] = {[0] = {}};
 
+void* gles_glXCreateContext(Display *display, XVisualInfo *visual, void *shareList, Bool isDirect)
+{
+    STATUS("weak\n");
+    return 0xDEADBEEF; 
+}
+
+
 // Applications are expected to go fullscreen and back without clobbering any resolution state
 // So if fullscreen, simply notify of a different resolution instead of setting it.
 void AXE11_GetWinDimensions(WindowDef *win, unsigned int *width_out, unsigned int *height_out)
@@ -92,18 +99,17 @@ WindowDef *AXE11_GetWinDefFromID(Window w)
 
 DECLSPEC Display *XOpenDisplay(const char *dpy_name)
 {
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_GAMECONTROLLER);
     if (!static_dpy)
         static_dpy = calloc(1, sizeof(*static_dpy));
 #ifndef NO_SDL
     // Attempt to create our "screen"
-    static_dpy->sdl_win = SDL_CreateWindow("test", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-		0, 0, SDL_WINDOW_OPENGL);
+    SDL_DisplayMode mode;
+    if (SDL_GetDesktopDisplayMode(0, &mode) != 0) {
+        ERROR("XOpenDisplay failure, %s.\n", SDL_GetError());
+        exit(-1);
+    }
 
-    if (!static_dpy->sdl_win) {
-		ERROR("Failed to create window. %s\n", SDL_GetError());
-		return NULL;
-	}
-    
     // SDL2.0 specific code
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
@@ -113,6 +119,18 @@ DECLSPEC Display *XOpenDisplay(const char *dpy_name)
     SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+
+    STATUS("Found dpy mode %d %d.\n", mode.w, mode.h);
+    static_dpy->sdl_win = SDL_CreateWindow("test", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+		mode.w, mode.h, SDL_WINDOW_OPENGL);
+
+    if (!static_dpy->sdl_win) {
+		ERROR("Failed to create window. %s\n", SDL_GetError());
+		return NULL;
+	}
+
+    static_screens[0].width = mode.w;
+    static_screens[0].height = mode.h;
 
     static_dpy->sdl_ctx = SDL_GL_CreateContext(static_dpy->sdl_win);
 	if (!static_dpy->sdl_ctx) {
@@ -126,7 +144,7 @@ DECLSPEC Display *XOpenDisplay(const char *dpy_name)
     static_dpy->nscreens = 1;
     static_dpy->screens = static_screens;
     static_dpy->default_screen = 0;
-    SDL_GetWindowSize(static_dpy->sdl_win, &static_screens[0].width, &static_screens[0].height);
+
     int depth, unused;
     uint32_t fmt = SDL_GetWindowPixelFormat(static_dpy->sdl_win);
     SDL_PixelFormatEnumToMasks(fmt, &depth, &unused, &unused, &unused, &unused);
